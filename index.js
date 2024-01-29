@@ -154,14 +154,27 @@ function sendMessagesToWebSocketClients() {
     });
 }
 
+const verifyToken = (req, res, next) => {
+    const token = req.header('Authorization');
 
+    if (!token) return res.status(401).json({
+        success: false,
+        loginMessage: 'Access denied'
+    });
 
+    try {
+        const decoded = jwt.verify(token, secretKey);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            loginMessage: 'Invalid token'
+        });
+    }
+};
 
-app.get('/', (req, res) => {
-    res.json('parsedMessages');
-});
-
-app.get('/data/:tableName', (req, res) => {
+app.get('/data/:tableName', verifyToken, (req, res) => {
 
     function padTo2Digits(num) {
         return num.toString().padStart(2, '0');
@@ -288,25 +301,7 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-const verifyToken = (req, res, next) => {
-    const token = req.header('Authorization');
 
-    if (!token) return res.status(401).json({
-        success: false,
-        loginMessage: 'Access denied'
-    });
-
-    try {
-        const decoded = jwt.verify(token, secretKey);
-        req.user = decoded;
-        next();
-    } catch (error) {
-        res.status(400).json({
-            success: false,
-            loginMessage: 'Invalid token'
-        });
-    }
-};
 
 app.post('/api/register', (req, res) => {
     const {
@@ -356,7 +351,7 @@ app.get('/api/home', verifyToken, (req, res) => {
     });
 });
 
-app.get('/api/Devices/:userName', (req, res) => {
+app.get('/api/Devices/:userName', verifyToken, (req, res) => {
     const {
         userName
     } = req.params;
@@ -387,7 +382,7 @@ app.get('/api/Devices/:userName', (req, res) => {
 
 });
 
-app.post('/api/newDevice', (req, res) => {
+app.post('/api/newDevice', verifyToken, (req, res) => {
     const {
         newDeviceName,
         newDeviceSerial,
@@ -435,7 +430,7 @@ app.post('/api/newDevice', (req, res) => {
 });
 
 
-app.delete('/api/deleteDevice/:id', (req, res) => {
+app.delete('/api/deleteDevice/:id', verifyToken, (req, res) => {
     const id = req.params.id;
     const deviceDelete = 'DELETE FROM `devices` WHERE id =?';
     db.query(deviceDelete, [id], (error, results) => {
@@ -452,7 +447,7 @@ app.delete('/api/deleteDevice/:id', (req, res) => {
     });
 })
 
-app.put('/api/updateDevice/:id', (req, res) => {
+app.put('/api/updateDevice/:id', verifyToken, (req, res) => {
     const id = req.params.id;
     const {
         newDeviceName,
